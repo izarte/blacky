@@ -1,0 +1,24 @@
+[project]
+name = "blacky"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "gymnasium>=0.29.1,<1.2.0",
+    "numpy>=1.20,<2.0",
+    "pettingzoo>=1.25.0",
+    "supersuit>=3.10.0",
+    "rich>=14.0.0",
+    "tqdm>=4.67.1",
+    "SuperSuit>=3.9.0",
+    "tensorflow-probability>=0.19.0",
+    "ray[rllib]>=2.48.0",
+    "emoji",
+    "torch>=2.7.1",
+    "pillow>=11.3.0",
+]
+
+
+[tool.ruff]
+ignore = ["F401"]  # Ignore unused import removal
