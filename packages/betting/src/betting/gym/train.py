@@ -70,7 +70,7 @@ def train_blackjack_agent(models_path, logs_path, tensoboard_logs_path):
     mean_reward, std_reward = evaluate_policy(
         model,
         eval_env,
-        n_eval_episodes=100,
+        n_eval_episodes=500,
         deterministic=True,
     )
     print(f"🏆 Best model mean reward: {mean_reward:.2f} ± {std_reward:.2f}")

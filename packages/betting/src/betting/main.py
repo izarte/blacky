@@ -1,4 +1,5 @@
 import asyncio
+import csv
 import logging
 import os
 import signal
@@ -9,6 +10,7 @@ from pathlib import Path
 import click
 from rich.console import Console
 
+from betting.gym.evaluate import evaluate
 from betting.gym.train import train_blackjack_agent
 
 SCRIPT_DIR = Path(os.path.dirname(os.path.abspath(__file__)))
@@ -62,6 +64,50 @@ def train_betting_agent():
         logs_path=logs_path,
         tensoboard_logs_path=tensorboard_logs_path,
     )
+
+
+@gym.command(name="eval")
+@click.option(
+    "--model-path", type=click.Path(exists=True), help="Path to the model file"
+)
+def evaluation_model(model_path):
+    if model_path is None:
+        # Find the latest experiment directory
+        if not DEFAULT_SAVE_DIR.exists():
+            console.print("[red]No experiments directory found[/red]")
+            sys.exit(1)
+
+        experiment_dirs = [d for d in DEFAULT_SAVE_DIR.iterdir() if d.is_dir()]
+        if not experiment_dirs:
+            console.print("[red]No experiment directories found[/red]")
+            sys.exit(1)
+
+        latest_dir = max(experiment_dirs, key=lambda d: d.stat().st_mtime)
+        models_dir = latest_dir / "models"
+
+        if not models_dir.exists():
+            console.print(f"[red]No models directory found in {latest_dir}[/red]")
+            sys.exit(1)
+
+        model_files = list(models_dir.glob("*.zip"))
+        if not model_files:
+            console.print(f"[red]No model files found in {models_dir}[/red]")
+            sys.exit(1)
+
+        model_path = max(model_files, key=lambda f: f.stat().st_mtime)
+        console.print(f"[green]Using latest model: {model_path}[/green]")
+    mean_reward, mean_std = evaluate(model_path)
+    console.print(f"Model mean reward: {mean_reward} ± {mean_std}")
+    # Save results to CSV
+    results_path = latest_dir / "results" / "results.csv"
+    os.makedirs(results_path.parent, exist_ok=True)
+
+    with open(results_path, "w", newline="") as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(["model_path", "mean_reward", "std_deviation"])
+        writer.writerow([str(model_path), mean_reward, mean_std])
+
+    console.print(f"[green]Results saved to: {results_path}[/green]")
 
 
 def main():

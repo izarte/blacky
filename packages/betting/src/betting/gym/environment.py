@@ -30,9 +30,9 @@ class BlackjackEnv(gym.Env):
         self.can_double = True
 
         self.observation_space = gym.spaces.Box(
-            low=np.array([[0, 0] for _ in range(100)], dtype=np.float32),
-            high=np.array([[13, 4] for _ in range(100)], dtype=np.float32),
-            shape=(100, 2),
+            low=0,
+            high=50,
+            shape=(10,),
             dtype=np.float32,
         )
         self.action_space = gym.spaces.Discrete(11)  # 0 to 10 tokens
@@ -97,9 +97,15 @@ class BlackjackEnv(gym.Env):
         # print("dealer hand", self.dealer_hand)
 
     def _get_obs(self):
-        obs = np.zeros((100, 2), dtype=np.float32)
-        for i, card in enumerate(self.last_cards[:100]):
-            obs[i] = [card[0], card[1]]
+        obs = np.zeros(10, dtype=np.float32)
+        for card in self.last_cards:
+            rank = card[0]
+            if rank == 1:
+                obs[0] += 1
+            elif 2 <= rank <= 9:
+                obs[rank - 1] += 1
+            else:  # rank >= 10 (10, J, Q, K)
+                obs[9] += 1
         return obs
 
     def _play_hand(self, hand: list, bet: int, is_active):
