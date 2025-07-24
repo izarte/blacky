@@ -24,6 +24,7 @@ class BlackjackEnv(AECEnv):
         self.terminations = {agent: False for agent in self.agents}
         self.truncations = {agent: False for agent in self.agents}
         self.infos = {agent: {} for agent in self.agents}
+        self.last_game = [[]]
 
         # Game state
         self.deck = None
@@ -41,16 +42,16 @@ class BlackjackEnv(AECEnv):
             agent: spaces.Dict(
                 {
                     "player_hand": spaces.Box(
-                        low=0, high=31, shape=(3,), dtype=np.int32
+                        low=0, high=31, shape=(3,), dtype=np.float32
                     ),
                     "dealer_card": spaces.Box(
-                        low=0, high=11, shape=(3,), dtype=np.int32
+                        low=0, high=11, shape=(3,), dtype=np.float32
                     ),
                     "visible_cards": spaces.Box(
-                        low=np.array([[1, 1] for _ in range(20)]),
-                        high=np.array([[13, 4] for _ in range(20)]),
-                        shape=(20, 2),
-                        dtype=np.int32,
+                        low=np.array([[0, 0] for _ in range(100)], dtype=np.float32),
+                        high=np.array([[13, 4] for _ in range(100)], dtype=np.float32),
+                        shape=(100, 2),
+                        dtype=np.float32,
                     ),
                 }
             )
@@ -112,14 +113,15 @@ class BlackjackEnv(AECEnv):
         self._agent_selector = AgentSelector(self.agents)
         self.agent_selection = self._agent_selector.reset()
 
-        return self._get_observations(), self.infos
+        # return self._get_observations(), self.infos
 
     def step(self, action):
         if (
             self.terminations[self.agent_selection]
             or self.truncations[self.agent_selection]
         ):
-            self._was_dead_step(action)
+            self.terminations[self.agent_selection] = True
+            self.agent_selection = self._agent_selector.next()
             return
 
         agent = self.agent_selection
@@ -149,6 +151,12 @@ class BlackjackEnv(AECEnv):
         if all(self.terminations.values()):
             # Dealer's turn
             dealer_total, _ = self._calculate_hand(self.dealer_hand)
+            # Store current visible cards for tracking the game history
+            self.last_game = [
+                [card for card in self.dealer_hand]
+                + [card for hand in self.player_hands for card in hand]
+            ]
+
             while dealer_total < 17:
                 self.dealer_hand.append(self._draw_card())
                 dealer_total, _ = self._calculate_hand(self.dealer_hand)
@@ -167,13 +175,13 @@ class BlackjackEnv(AECEnv):
         if self.render_mode == "human":
             self.render()
 
-        return (
-            self._get_observations(),
-            self.rewards,
-            self.terminations,
-            self.truncations,
-            self.infos,
-        )
+        # return (
+        #     self._get_observations(),
+        #     self.rewards,
+        #     self.terminations,
+        #     self.truncations,
+        #     self.infos,
+        # )
 
     def _create_deck(self):
         suits = [1, 2, 3, 4]  # 1=Spades, 2=Hearts, 3=Diamonds, 4=Clubs
@@ -254,14 +262,14 @@ class BlackjackEnv(AECEnv):
             total, usable_ace = self._calculate_hand(self.player_hands[idx])
             player_hand = np.array(
                 [total, len(self.player_hands[idx]), 1 if usable_ace else 0],
-                dtype=np.int32,
+                dtype=np.float32,
             )
 
             dealer_total, dealer_usable_ace = self._calculate_hand(
                 [self.dealer_hand[0]]
             )
             dealer_hand = np.array(
-                [dealer_total, 1, 1 if dealer_usable_ace else 0], dtype=np.int32
+                [dealer_total, 1, 1 if dealer_usable_ace else 0], dtype=np.float32
             )
 
             visible_cards = self._get_visible_cards()
@@ -274,7 +282,7 @@ class BlackjackEnv(AECEnv):
         return observations
 
     def _get_visible_cards(self):
-        visible_cards = np.zeros((20, 2), dtype=np.int32)
+        visible_cards = np.zeros((100, 2), dtype=np.float32)
         card_idx = 0
 
         # Add dealer's visible card
@@ -284,12 +292,18 @@ class BlackjackEnv(AECEnv):
         # Add all player cards
         for hand in self.player_hands:
             for card in hand:
-                if card_idx < 20:
+                if card_idx < 100:
                     visible_cards[card_idx] = card
                     card_idx += 1
+                else:
+                    print("out of space in visible cards")
 
+        # Add cards from last game if any space left
+        if self.last_game:
+            for card in self.last_game[0]:
+                if card_idx < 100:
+                    visible_cards[card_idx] = card
+                    card_idx += 1
+                else:
+                    print("out of space in visible cards")
         return visible_cards
-
-    # Keep all the existing helper methods (_create_deck, _riffle_shuffle, _shuffle,
-    # _draw_card, _calculate_hand, _draw_hands) as they are
-    # _draw_card, _calculate_hand, _draw_hands) as they are

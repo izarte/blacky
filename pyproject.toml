@@ -17,8 +17,17 @@ dependencies = [
     "emoji",
     "torch>=2.7.1",
     "pillow>=11.3.0",
+    "jupyter>=1.1.1",
+    "tensorboard>=2.20.0",
+    "matplotlib>=3.10.3",
+    "torchrl>=0.9.2",
+    "pandas>=2.3.1",
+    "stable-baselines3>=2.6.0",
 ]
 
 
 [tool.ruff]
 ignore = ["F401"]  # Ignore unused import removal
+
+[tool.uv.workspace]
+members = ["betting"]
