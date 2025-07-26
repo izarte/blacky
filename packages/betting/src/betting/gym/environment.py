@@ -32,12 +32,14 @@ class BlackjackEnv(gym.Env):
         self.observation_space = gym.spaces.Box(
             low=0,
             high=50,
-            shape=(10,),
+            shape=(3,),
             dtype=np.float32,
         )
         self.action_space = gym.spaces.Discrete(11)  # 0 to 10 tokens
 
     def reset(self, seed=None, options=None):
+        if not seed:
+            seed = 42
         super().reset(seed=seed)
         np.random.seed(seed)
         self.num_players = np.random.randint(1, self.max_num_players)
@@ -93,19 +95,16 @@ class BlackjackEnv(gym.Env):
                 else:
                     self.player_hands[i].append(self._draw_card())
 
-        # print("player_hands", self.player_hands)
-        # print("dealer hand", self.dealer_hand)
-
     def _get_obs(self):
-        obs = np.zeros(10, dtype=np.float32)
+        obs = np.zeros(3, dtype=np.float32)
         for card in self.last_cards:
             rank = card[0]
-            if rank == 1:
+            if rank == 1:  # Ace
                 obs[0] += 1
-            elif 2 <= rank <= 9:
-                obs[rank - 1] += 1
+            elif 2 <= rank <= 9:  # rank >= 22 && rank <= 9
+                obs[1] += 1
             else:  # rank >= 10 (10, J, Q, K)
-                obs[9] += 1
+                obs[2] += 1
         return obs
 
     def _play_hand(self, hand: list, bet: int, is_active):

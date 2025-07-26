@@ -45,7 +45,14 @@ def gym():
 
 
 @gym.command(name="train")
-def train_betting_agent():
+@click.option("--decks", type=int, default=6, help="Number of decks")
+@click.option(
+    "--hands_per_check",
+    type=int,
+    default=10,
+    help="Number of continuous hands played before finishing the episode",
+)
+def train_betting_agent(decks, hands_per_check):
     timestamp = datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
     save_dir_path = DEFAULT_SAVE_DIR / timestamp
     models_path = save_dir_path / "models"
@@ -63,6 +70,8 @@ def train_betting_agent():
         models_path=models_path,
         logs_path=logs_path,
         tensoboard_logs_path=tensorboard_logs_path,
+        num_decks=decks,
+        hands_per_check=hands_per_check,
     )
 
 
@@ -70,7 +79,15 @@ def train_betting_agent():
 @click.option(
     "--model-path", type=click.Path(exists=True), help="Path to the model file"
 )
-def evaluation_model(model_path):
+@click.option("--decks", type=int, default=6, help="Number of decks")
+@click.option(
+    "--hands_per_check",
+    type=int,
+    default=10,
+    help="Number of continuous hands played before finishing the episode",
+)
+@click.option("--episodes", type=int, default=500, help="Number of episodes")
+def evaluation_model(model_path, decks, hands_per_check, episodes):
     if model_path is None:
         # Find the latest experiment directory
         if not DEFAULT_SAVE_DIR.exists():
@@ -96,7 +113,11 @@ def evaluation_model(model_path):
 
         model_path = max(model_files, key=lambda f: f.stat().st_mtime)
         console.print(f"[green]Using latest model: {model_path}[/green]")
-    mean_reward, mean_std = evaluate(model_path)
+
+    mean_reward, mean_std = evaluate(
+        model_path, episodes=episodes, hands_per_check=hands_per_check, num_decks=decks
+    )
+
     console.print(f"Model mean reward: {mean_reward} ± {mean_std}")
     # Save results to CSV
     results_path = latest_dir / "results" / "results.csv"

@@ -17,16 +17,29 @@ from betting.gym.environment import BlackjackEnv
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 
 
-def train_blackjack_agent(models_path, logs_path, tensoboard_logs_path):
+def train_blackjack_agent(
+    models_path,
+    logs_path,
+    tensoboard_logs_path,
+    hands_per_check: int = 1,
+    num_decks: int = 4,
+):
+    seed = 42
     # Create environment
-    env = BlackjackEnv()
+    env = BlackjackEnv(hands_per_check=hands_per_check, num_decks=num_decks)
     env = Monitor(env)
 
     # Create vectorized environment for training
-    vec_env = make_vec_env(lambda: BlackjackEnv(), n_envs=4)
+    vec_env = make_vec_env(
+        lambda: BlackjackEnv(hands_per_check=hands_per_check, num_decks=num_decks),
+        n_envs=8,
+        seed=seed,
+    )
 
     # Create evaluation environment
-    eval_env = Monitor(BlackjackEnv())
+    eval_env = Monitor(
+        BlackjackEnv(hands_per_check=hands_per_check, num_decks=num_decks)
+    )
 
     # Define model
     model = PPO(
@@ -35,12 +48,14 @@ def train_blackjack_agent(models_path, logs_path, tensoboard_logs_path):
         verbose=1,
         learning_rate=3e-4,
         n_steps=2048,
-        batch_size=64,
-        n_epochs=10,
+        batch_size=256,
+        n_epochs=20,
         gamma=0.99,
         gae_lambda=0.95,
         clip_range=0.2,
         tensorboard_log=tensoboard_logs_path,
+        seed=seed,
+        device="cpu",
     )
 
     # Create callbacks
@@ -55,7 +70,7 @@ def train_blackjack_agent(models_path, logs_path, tensoboard_logs_path):
     )
 
     # Train the model
-    total_timesteps = 100000000
+    total_timesteps = 10000000
     model.learn(
         total_timesteps=total_timesteps,
         callback=eval_callback,
